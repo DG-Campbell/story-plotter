@@ -1278,6 +1278,9 @@
               handleFreeformStart();
             }
           });
+          
+          // Auto-focus the input
+          setTimeout(() => startInput.focus(), 0);
         } else if (state.currentPhase === 'end') {
           inputSection.classList.remove('hidden');
           inputSection.innerHTML = `
@@ -1297,6 +1300,9 @@
               handleFreeformEnd();
             }
           });
+          
+          // Auto-focus the input
+          setTimeout(() => endInput.focus(), 0);
         } else if (state.currentPhase === 'filling') {
           const gap = findNextGap();
           if (gap) {
@@ -1328,6 +1334,9 @@
                 handleFreeformMiddle(gap);
               }
             });
+            
+            // Auto-focus the input
+            setTimeout(() => middleInput.focus(), 0);
           } else {
             inputSection.classList.add('hidden');
             state.chaptersEnabled = true;
@@ -1358,6 +1367,9 @@
               handleBeatSubmit(nextBeat);
             }
           });
+          
+          // Auto-focus the input
+          setTimeout(() => beatInput.focus(), 0);
         } else {
           inputSection.classList.add('hidden');
           state.chaptersEnabled = true;
@@ -1952,7 +1964,9 @@
       if (!point || point.locked) return;
       point.editing = true;
       render();
-      document.getElementById(`editBeat-${id}`)?.focus();
+      setTimeout(() => {
+        document.getElementById(`editBeat-${id}`)?.focus();
+      }, 0);
     };
 
     window.saveBeatEdit = function(id) {
@@ -1989,7 +2003,9 @@
       if (!point || point.locked) return;
       point.editing = true;
       render();
-      document.getElementById(`editFreeform-${id}`)?.focus();
+      setTimeout(() => {
+        document.getElementById(`editFreeform-${id}`)?.focus();
+      }, 0);
     };
 
     window.saveFreeformEdit = function(id) {
@@ -2026,7 +2042,9 @@
       if (point) {
         point.addingChapter = true;
         render();
-        document.getElementById(`chapterTitle-${pointId}`)?.focus();
+        setTimeout(() => {
+          document.getElementById(`chapterTitle-${pointId}`)?.focus();
+        }, 0);
       }
     };
 
@@ -2075,7 +2093,9 @@
       if (chapter) {
         chapter.editing = true;
         render();
-        document.getElementById(`editChapterTitle-${chapterId}`)?.focus();
+        setTimeout(() => {
+          document.getElementById(`editChapterTitle-${chapterId}`)?.focus();
+        }, 0);
       }
     };
 
@@ -2139,7 +2159,9 @@
       if (chapter) {
         chapter.editingNotes = true;
         render();
-        document.getElementById(`editNotes-${chapterId}`)?.focus();
+        setTimeout(() => {
+          document.getElementById(`editNotes-${chapterId}`)?.focus();
+        }, 0);
       }
     };
 
@@ -2149,7 +2171,9 @@
       if (chapter) {
         chapter.editingNotes = true;
         render();
-        document.getElementById(`editNotes-${chapterId}`)?.focus();
+        setTimeout(() => {
+          document.getElementById(`editNotes-${chapterId}`)?.focus();
+        }, 0);
       }
     };
 
@@ -2182,7 +2206,9 @@
       if (chapter) {
         chapter.addingTodo = true;
         render();
-        document.getElementById(`newTodo-${chapterId}`)?.focus();
+        setTimeout(() => {
+          document.getElementById(`newTodo-${chapterId}`)?.focus();
+        }, 0);
       }
     };
 
@@ -2234,7 +2260,9 @@
       if (todo) {
         todo.editing = true;
         render();
-        document.getElementById(`editTodo-${todoId}`)?.focus();
+        setTimeout(() => {
+          document.getElementById(`editTodo-${todoId}`)?.focus();
+        }, 0);
       }
     };
 
