@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recursive Story Plotter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Warm, booky color palette */
+      --parchment: #f8f4e6;
+      --cream: #faf7f0;
+      --tan: #e8dcc4;
+      --brown-light: #c9b896;
+      --brown: #8b7355;
+      --brown-dark: #5d4e37;
+      --leather: #3d2e1f;
+      --gold: #d4af37;
+      --gold-dark: #b8941f;
+      --ink: #2a2420;
+      
+      /* Semantic colors */
+      --beat-bg: #e8d8c0;
+      --beat-border: var(--brown);
+      --freeform-bg: #d4c4ac;
+      --freeform-border: var(--brown-dark);
+      --chapter-bg: var(--cream);
+      --note-bg: #fff9e6;
+      --note-border: #e6d699;
+      --todo-bg: #e8f4e8;
+      --todo-border: #99cc99;
+      
+      /* Status colors */
+      --status-good: #6b8e4e;
+      --status-warning: #d4941f;
+      --status-danger: #a63c3c;
+      
+      /* UI */
+      --shadow: rgba(61, 46, 31, 0.15);
+      --shadow-strong: rgba(61, 46, 31, 0.25);
+      
+      /* Typography */
+      --font-display: 'Crimson Pro', serif;
+      --font-body: 'EB Garamond', serif;
+    }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      background: linear-gradient(135deg, #f5f1e8 0%, #e8dcc4 100%);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--parchment);
+      border-radius: 8px;
+      box-shadow: 0 8px 30px var(--shadow-strong);
+      padding: 30px;
+      border: 1px solid var(--tan);
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--brown);
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--leather);
+      letter-spacing: 0.5px;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Buttons */
+    button, .button {
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 8px 16px;
+      border: 1px solid var(--brown);
+      background: var(--cream);
+      color: var(--leather);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px var(--shadow);
+    }
+
+    button:hover, .button:hover {
+      background: var(--tan);
+      box-shadow: 0 3px 6px var(--shadow);
+      transform: translateY(-1px);
+    }
+
+    button:active, .button:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 2px var(--shadow);
+    }
+
+    button.primary {
+      background: var(--gold);
+      border-color: var(--gold-dark);
+      color: var(--leather);
+      font-weight: 600;
+    }
+
+    button.primary:hover {
+      background: var(--gold-dark);
+    }
+
+    button.small {
+      padding: 4px 10px;
+      font-size: 13px;
+    }
+
+    button.icon-only {
+      padding: 4px 8px;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    button.danger {
+      background: var(--status-danger);
+      border-color: #8b2f2f;
+      color: white;
+    }
+
+    button.danger:hover {
+      background: #8b2f2f;
+    }
+
+    /* Input Fields */
+    input[type="text"],
+    textarea {
+      font-family: var(--font-body);
+      font-size: 15px;
+      padding: 10px 14px;
+      border: 1px solid var(--brown-light);
+      background: white;
+      color: var(--ink);
+      border-radius: 6px;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.5;
+    }
+
+    .story-name-input {
+      font-family: var(--font-display);
+      font-size: 1.3em;
+      font-weight: 600;
+      padding: 12px 16px;
+      margin-bottom: 15px;
+      background: var(--cream);
+    }
+
+    /* Structure Info */
+    .structure-info {
+      background: var(--tan);
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid var(--brown);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .structure-info h3 {
+      font-family: var(--font-display);
+      font-size: 1.2em;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--leather);
+    }
+
+    .structure-info p {
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .structure-info .examples {
+      font-style: italic;
+      color: var(--brown-dark);
+      font-size: 14px;
+    }
+
+    /* Input Section */
+    .input-section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 25px;
+      border: 1px solid var(--brown-light);
+      box-shadow: 0 2px 8px var(--shadow);
+      animation: slideDown 0.3s ease;
+    }
+
+    .input-section .prompt {
+      font-family: var(--font-display);
+      font-size: 1.1em;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--leather);
+    }
+
+    .input-section .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    /* Timeline */
+    .timeline {
+      position: relative;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--brown-light), var(--brown));
+      border-radius: 2px;
+    }
+
+    /* Plot Point */
+    .plot-point {
+      margin-bottom: 20px;
+      margin-left: 50px;
+      position: relative;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .plot-point::before {
+      content: '';
+      position: absolute;
+      left: -36px;
+      top: 18px;
+      width: 12px;
+      height: 12px;
+      background: var(--gold);
+      border: 3px solid var(--brown);
+      border-radius: 50%;
+      box-shadow: 0 2px 6px var(--shadow);
+    }
+
+    .plot-point.unfilled::before {
+      background: var(--parchment);
+    }
+
+    .beat-card,
+    .freeform-card {
+      background: var(--beat-bg);
+      border: 2px solid var(--beat-border);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: 0 3px 10px var(--shadow);
+      transition: all 0.2s ease;
+    }
+
+    .freeform-card {
+      background: var(--freeform-bg);
+      border-color: var(--freeform-border);
+    }
+
+    .beat-card:hover,
+    .freeform-card:hover {
+      box-shadow: 0 5px 15px var(--shadow-strong);
+    }
+
+    .beat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+      gap: 15px;
+    }
+
+    .beat-title {
+      font-family: var(--font-display);
+      font-size: 1.2em;
+      font-weight: 700;
+      color: var(--leather);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .beat-content {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--ink);
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+
+    .beat-content.unfilled {
+      color: var(--brown);
+      font-style: normal;
+    }
+
+    .beat-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Chapters */
+    .chapters-section {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid var(--brown-light);
+    }
+
+    .chapter-item {
+      background: var(--chapter-bg);
+      border: 1px solid var(--brown-light);
+      border-radius: 6px;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+    }
+
+    .chapter-item.moving {
+      opacity: 0.5;
+      transform: scale(0.98);
+    }
+
+    .chapter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .chapter-title {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1.05em;
+      color: var(--leather);
+    }
+
+    .chapter-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .chapter-notes {
+      background: var(--note-bg);
+      border: 1px solid var(--note-border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-top: 8px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .chapter-notes strong {
+      color: var(--brown-dark);
+      font-weight: 600;
+    }
+
+    .todos-list {
+      margin-top: 8px;
+    }
+
+    .todo-item {
+      background: var(--todo-bg);
+      border: 1px solid var(--todo-border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .todo-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--status-good);
+    }
+
+    .todo-item.completed {
+      opacity: 0.6;
+    }
+
+    .todo-item.completed .todo-text {
+      text-decoration: line-through;
+    }
+
+    .todo-text {
+      flex: 1;
+    }
+
+    .todo-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    /* Inline Forms */
+    .inline-form {
+      margin-top: 10px;
+      padding: 12px;
+      background: white;
+      border: 1px solid var(--brown-light);
+      border-radius: 6px;
+      animation: slideDown 0.2s ease;
+    }
+
+    .inline-form .form-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .inline-form .form-row:first-child {
+      margin-top: 0;
+    }
+
+    /* Projections */
+    .projections {
+      background: var(--tan);
+      border: 2px solid var(--brown);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .projections h3 {
+      font-family: var(--font-display);
+      font-size: 1.3em;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--leather);
+    }
+
+    .projection-summary {
+      font-size: 15px;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: var(--parchment);
+      border-radius: 6px;
+      border: 1px solid var(--brown-light);
+    }
+
+    .projection-summary strong {
+      color: var(--gold-dark);
+      font-weight: 700;
+    }
+
+    .projection-beat {
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: white;
+      border-radius: 6px;
+      border-left: 4px solid var(--status-good);
+    }
+
+    .projection-beat.warning {
+      border-left-color: var(--status-warning);
+    }
+
+    .projection-beat.danger {
+      border-left-color: var(--status-danger);
+    }
+
+    .projection-beat-name {
+      font-weight: 600;
+      color: var(--leather);
+      margin-bottom: 4px;
+    }
+
+    .projection-beat-stats {
+      font-size: 14px;
+      color: var(--brown-dark);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(42, 36, 32, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal {
+      background: var(--parchment);
+      border: 2px solid var(--brown);
+      border-radius: 8px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px var(--shadow-strong);
+      animation: scaleIn 0.2s ease;
+    }
+
+    .modal h2 {
+      font-family: var(--font-display);
+      font-size: 1.5em;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--leather);
+    }
+
+    .modal select {
+      font-family: var(--font-body);
+      font-size: 15px;
+      padding: 10px 14px;
+      border: 1px solid var(--brown-light);
+      background: white;
+      color: var(--ink);
+      border-radius: 6px;
+      width: 100%;
+      margin-bottom: 15px;
+      cursor: pointer;
+    }
+
+    .modal .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .modal .button-group button {
+      flex: 1;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* Utility */
+    .hidden {
+      display: none;
+    }
+
+    .mt-1 { margin-top: 10px; }
+    .mb-1 { margin-bottom: 10px; }
+
+    /* File input styling */
+    input[type="file"] {
+      display: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 1.5em;
+      }
+
+      .header-buttons {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .plot-point {
+        margin-left: 30px;
+      }
+
+      .timeline::before {
+        left: 10px;
+      }
+
+      .plot-point::before {
+        left: -26px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-top">
+        <h1>Recursive Story Plotter</h1>
+        <div class="header-buttons">
+          <button id="importBtn">📁 Import</button>
+          <button id="exportBtn">📄 Export</button>
+          <button id="newStoryBtn">New Story</button>
+        </div>
+      </div>
+      <input type="text" id="storyNameInput" class="story-name-input" placeholder="Story Name">
+      <div id="structureControls">
+        <button id="changeStructureBtn">Change Structure</button>
+      </div>
+    </header>
+
+    <div id="structureInfo" class="structure-info hidden"></div>
+
+    <div id="inputSection" class="input-section hidden"></div>
+
+    <div id="projections" class="projections hidden"></div>
+
+    <div id="timeline" class="timeline"></div>
+  </div>
+
+  <!-- Hidden file input -->
+  <input type="file" id="fileInput" accept=".txt">
+
+  <!-- Modal container -->
+  <div id="modalContainer"></div>
+
+  <script>
+    // Story structures
+    const STRUCTURES = {
+      freeform: {
+        id: 'freeform',
+        name: 'Freeform (No Structure)',
+        description: 'Pure recursive bisection with no predefined beats. Maximum flexibility.',
+        examples: '',
+        beats: []
+      },
+      herosJourney: {
+        id: 'heros-journey',
+        name: "Hero's Journey",
+        description: "Based on Joseph Campbell / Christopher Vogler's monomyth.",
+        examples: 'Star Wars, The Matrix, Lord of the Rings, Harry Potter',
+        beats: [
+          { id: 'ordinary-world', name: 'Ordinary World', prompt: "What is the hero's normal life?", percentage: 8 },
+          { id: 'call-to-adventure', name: 'Call to Adventure', prompt: 'What disrupts the ordinary world?', percentage: 5 },
+          { id: 'refusal', name: 'Refusal of the Call', prompt: 'Why does the hero resist change?', percentage: 5 },
+          { id: 'meeting-mentor', name: 'Meeting the Mentor', prompt: 'Who gives the hero guidance?', percentage: 7 },
+          { id: 'crossing-threshold', name: 'Crossing the Threshold', prompt: 'What commits the hero to the journey?', percentage: 8 },
+          { id: 'tests-allies-enemies', name: 'Tests, Allies, and Enemies', prompt: 'What challenges shape the hero?', percentage: 12 },
+          { id: 'approach', name: 'Approach to Inmost Cave', prompt: 'What dangerous place must be entered?', percentage: 8 },
+          { id: 'ordeal', name: 'Ordeal', prompt: 'What is the greatest challenge?', percentage: 10 },
+          { id: 'reward', name: 'Reward', prompt: 'What does the hero gain?', percentage: 8 },
+          { id: 'road-back', name: 'The Road Back', prompt: 'What forces a return home?', percentage: 8 },
+          { id: 'resurrection', name: 'Resurrection', prompt: 'What final test proves transformation?', percentage: 12 },
+          { id: 'return', name: 'Return with Elixir', prompt: 'How has the hero changed?', percentage: 9 }
+        ]
+      },
+      storyCircle: {
+        id: 'story-circle',
+        name: "Dan Harmon's Story Circle",
+        description: 'Simplified Hero\'s Journey for episodic/comedy.',
+        examples: 'Community, Rick and Morty, Doctor Who, The Lego Movie',
+        beats: [
+          { id: 'you', name: 'You (Comfort Zone)', prompt: 'Where does the character start?', percentage: 12 },
+          { id: 'need', name: 'Need (Want Something)', prompt: 'What do they desire?', percentage: 13 },
+          { id: 'go', name: 'Go (Enter Unfamiliar)', prompt: 'What unfamiliar situation do they enter?', percentage: 12 },
+          { id: 'search', name: 'Search (Adapt)', prompt: 'How do they struggle to adapt?', percentage: 13 },
+          { id: 'find', name: 'Find (Get What They Want)', prompt: 'What do they get?', percentage: 12 },
+          { id: 'take', name: 'Take (Pay a Price)', prompt: 'What price do they pay?', percentage: 13 },
+          { id: 'return', name: 'Return (Go Back)', prompt: 'How do they return to familiar?', percentage: 12 },
+          { id: 'change', name: 'Change (Having Changed)', prompt: 'How are they different?', percentage: 13 }
+        ]
+      },
+      threeAct: {
+        id: 'three-act',
+        name: 'Three-Act Structure',
+        description: 'Hollywood screenwriting foundation.',
+        examples: 'Die Hard, The Godfather, Casablanca, Jaws',
+        beats: [
+          { id: 'setup', name: 'Setup', prompt: 'What is the world and characters?', percentage: 10 },
+          { id: 'inciting-incident', name: 'Inciting Incident', prompt: 'What event starts the story?', percentage: 5 },
+          { id: 'plot-point-1', name: 'Plot Point 1', prompt: 'What forces the hero into action?', percentage: 10 },
+          { id: 'rising-action', name: 'Rising Action', prompt: 'What obstacles arise?', percentage: 15 },
+          { id: 'midpoint', name: 'Midpoint', prompt: 'What reversal changes everything?', percentage: 10 },
+          { id: 'plot-point-2', name: 'Plot Point 2', prompt: 'What is the lowest point?', percentage: 15 },
+          { id: 'climax', name: 'Climax', prompt: 'What is the final confrontation?', percentage: 20 },
+          { id: 'resolution', name: 'Resolution', prompt: 'How does the story conclude?', percentage: 15 }
+        ]
+      },
+      saveCat: {
+        id: 'save-cat',
+        name: 'Save the Cat',
+        description: "Blake Snyder's detailed screenplay structure.",
+        examples: 'Miss Congeniality, Legally Blonde, Toy Story',
+        beats: [
+          { id: 'opening-image', name: 'Opening Image', prompt: 'What snapshot shows the "before"?', percentage: 4 },
+          { id: 'theme-stated', name: 'Theme Stated', prompt: 'What is the story really about?', percentage: 3 },
+          { id: 'setup', name: 'Setup', prompt: 'What is the status quo?', percentage: 6 },
+          { id: 'catalyst', name: 'Catalyst', prompt: 'What event changes everything?', percentage: 5 },
+          { id: 'debate', name: 'Debate', prompt: 'What makes the hero hesitate?', percentage: 7 },
+          { id: 'break-two', name: 'Break Into Two', prompt: 'What commits them to the journey?', percentage: 5 },
+          { id: 'b-story', name: 'B Story', prompt: 'What relationship develops?', percentage: 7 },
+          { id: 'fun-games', name: 'Fun and Games', prompt: 'What is the promise of the premise?', percentage: 10 },
+          { id: 'midpoint', name: 'Midpoint', prompt: 'What false victory or defeat occurs?', percentage: 8 },
+          { id: 'bad-guys', name: 'Bad Guys Close In', prompt: 'How do enemies regroup?', percentage: 10 },
+          { id: 'all-lost', name: 'All Is Lost', prompt: 'What is the lowest point?', percentage: 5 },
+          { id: 'dark-night', name: 'Dark Night of the Soul', prompt: 'What moment of despair happens?', percentage: 5 },
+          { id: 'break-three', name: 'Break Into Three', prompt: 'What solution emerges?', percentage: 5 },
+          { id: 'finale', name: 'Finale', prompt: 'How is the climax resolved?', percentage: 15 },
+          { id: 'final-image', name: 'Final Image', prompt: 'What snapshot shows the "after"?', percentage: 5 }
+        ]
+      },
+      freytag: {
+        id: 'freytag',
+        name: "Freytag's Pyramid",
+        description: 'Classic dramatic structure.',
+        examples: 'Romeo and Juliet, Macbeth, Death of a Salesman',
+        beats: [
+          { id: 'exposition', name: 'Exposition', prompt: 'What is the background?', percentage: 15 },
+          { id: 'rising-action', name: 'Rising Action', prompt: 'What complications arise?', percentage: 30 },
+          { id: 'climax', name: 'Climax', prompt: 'What is the turning point?', percentage: 10 },
+          { id: 'falling-action', name: 'Falling Action', prompt: 'What are the consequences?', percentage: 30 },
+          { id: 'denouement', name: 'Denouement', prompt: 'How is everything resolved?', percentage: 15 }
+        ]
+      },
+      sevenPoint: {
+        id: 'seven-point',
+        name: 'Seven-Point Story Structure',
+        description: "Dan Wells' character arc focus.",
+        examples: 'The Hunger Games, Ender\'s Game, Mistborn',
+        beats: [
+          { id: 'hook', name: 'Hook (Starting Point)', prompt: 'Where does the character begin?', percentage: 12 },
+          { id: 'plot-turn-1', name: 'Plot Turn 1', prompt: 'What sets events in motion?', percentage: 13 },
+          { id: 'pinch-1', name: 'Pinch Point 1', prompt: 'What shows antagonistic force?', percentage: 13 },
+          { id: 'midpoint', name: 'Midpoint (Shift)', prompt: 'What shifts from reaction to action?', percentage: 12 },
+          { id: 'pinch-2', name: 'Pinch Point 2', prompt: 'What shows antagonistic force again?', percentage: 13 },
+          { id: 'plot-turn-2', name: 'Plot Turn 2', prompt: 'What gives final piece needed?', percentage: 13 },
+          { id: 'resolution', name: 'Resolution (Ending Point)', prompt: 'Where does the character end up?', percentage: 24 }
+        ]
+      },
+      kishotenketsu: {
+        id: 'kishotenketsu',
+        name: 'Kishotenketsu',
+        description: 'East Asian non-conflict structure.',
+        examples: 'Spirited Away, My Neighbor Totoro, Arrival',
+        beats: [
+          { id: 'ki', name: 'Ki (Introduction)', prompt: 'What is introduced?', percentage: 25 },
+          { id: 'sho', name: 'Shō (Development)', prompt: 'How does it develop?', percentage: 25 },
+          { id: 'ten', name: 'Ten (Twist/Complication)', prompt: 'What unexpected element appears?', percentage: 25 },
+          { id: 'ketsu', name: 'Ketsu (Reconciliation)', prompt: 'How are elements harmonized?', percentage: 25 }
+        ]
+      }
+    };
+
+    // Global state
+    let state = {
+      plotPoints: [],
+      currentStructure: STRUCTURES.freeform,
+      currentPhase: 'start',
+      workingGap: null,
+      currentBeat: null,
+      mode: 'freeform',
+      nextIdCounter: 0,
+      chaptersEnabled: false,
+      storyName: ''
+    };
+
+    // DOM elements
+    const storyNameInput = document.getElementById('storyNameInput');
+    const structureInfo = document.getElementById('structureInfo');
+    const inputSection = document.getElementById('inputSection');
+    const timeline = document.getElementById('timeline');
+    const projections = document.getElementById('projections');
+    const changeStructureBtn = document.getElementById('changeStructureBtn');
+    const newStoryBtn = document.getElementById('newStoryBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const fileInput = document.getElementById('fileInput');
+    const structureControls = document.getElementById('structureControls');
+
+    // Initialize
+    function init() {
+      loadAutoSave();
+      setupEventListeners();
+      render();
+    }
+
+    // Event listeners
+    function setupEventListeners() {
+      storyNameInput.addEventListener('input', (e) => {
+        state.storyName = e.target.value;
+        autoSave();
+      });
+
+      changeStructureBtn.addEventListener('click', showStructureModal);
+      newStoryBtn.addEventListener('click', handleNewStory);
+      exportBtn.addEventListener('click', handleExport);
+      importBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', handleImport);
+    }
+
+    // Auto-save
+    function autoSave() {
+      const data = {
+        plotPoints: state.plotPoints,
+        currentStructure: state.currentStructure.id,
+        currentPhase: state.currentPhase,
+        workingGap: state.workingGap,
+        currentBeat: state.currentBeat?.id,
+        mode: state.mode,
+        nextIdCounter: state.nextIdCounter,
+        chaptersEnabled: state.chaptersEnabled,
+        storyName: state.storyName
+      };
+      localStorage.setItem('storyPlotterAutoSave', JSON.stringify(data));
+    }
+
+    // Load auto-save
+    function loadAutoSave() {
+      const saved = localStorage.getItem('storyPlotterAutoSave');
+      if (!saved) return;
+
+      try {
+        const data = JSON.parse(saved);
+        state.plotPoints = data.plotPoints || [];
+        state.currentStructure = STRUCTURES[data.currentStructure] || STRUCTURES.freeform;
+        state.currentPhase = data.currentPhase || 'start';
+        state.workingGap = data.workingGap;
+        state.currentBeat = data.currentBeat ? 
+          state.currentStructure.beats.find(b => b.id === data.currentBeat) : null;
+        state.mode = data.mode || 'freeform';
+        state.nextIdCounter = data.nextIdCounter || 0;
+        state.chaptersEnabled = data.chaptersEnabled || false;
+        state.storyName = data.storyName || '';
+        storyNameInput.value = state.storyName;
+      } catch (e) {
+        console.error('Failed to load auto-save:', e);
+      }
+    }
+
+    // Structure modal
+    function showStructureModal() {
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `
+        <div class="modal">
+          <h2>Choose Story Structure</h2>
+          <select id="structureSelect">
+            <option value="freeform">Freeform (No Structure)</option>
+            <option value="herosJourney">Hero's Journey (12 beats)</option>
+            <option value="storyCircle">Dan Harmon's Story Circle (8 beats)</option>
+            <option value="threeAct">Three-Act Structure (8 beats)</option>
+            <option value="saveCat">Save the Cat (15 beats)</option>
+            <option value="freytag">Freytag's Pyramid (5 beats)</option>
+            <option value="sevenPoint">Seven-Point Story Structure (7 beats)</option>
+            <option value="kishotenketsu">Kishotenketsu (4 beats)</option>
+          </select>
+          <div class="button-group">
+            <button id="cancelStructure">Cancel</button>
+            <button id="applyStructure" class="primary">Apply Structure</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modalContainer').appendChild(modal);
+
+      document.getElementById('cancelStructure').addEventListener('click', () => {
+        modal.remove();
+      });
+
+      document.getElementById('applyStructure').addEventListener('click', () => {
+        const structureId = document.getElementById('structureSelect').value;
+        applyStructure(structureId);
+        modal.remove();
+      });
+    }
+
+    // Apply structure
+    function applyStructure(structureId) {
+      state.currentStructure = STRUCTURES[structureId];
+      state.plotPoints = [];
+      state.chaptersEnabled = false;
+
+      if (structureId === 'freeform') {
+        state.mode = 'freeform';
+        state.currentPhase = 'start';
+      } else {
+        state.mode = 'beat';
+        state.currentPhase = 'filling';
+        // Initialize beat plot points
+        state.plotPoints = state.currentStructure.beats.map((beat, index) => ({
+          id: state.nextIdCounter++,
+          type: 'beat',
+          beatId: beat.id,
+          beatName: beat.name,
+          beatPrompt: beat.prompt,
+          beatPercentage: beat.percentage,
+          content: '',
+          locked: false,
+          order: index,
+          editing: false,
+          chapters: [],
+          addingChapter: false
+        }));
+        // Hide structure selector after applying
+        structureControls.classList.add('hidden');
+      }
+
+      autoSave();
+      render();
+    }
+
+    // New story
+    function handleNewStory() {
+      if (confirm('Start a new story? Your current work will be exported first.')) {
+        handleExport();
+        localStorage.removeItem('storyPlotterAutoSave');
+        location.reload();
+      }
+    }
+
+    // Export
+    function handleExport() {
+      const lines = [];
+      lines.push('STORY_STRUCTURE_EXPORT');
+      lines.push(`StoryName: ${state.storyName || 'Untitled'}`);
+      lines.push(`Structure: ${state.currentStructure.name}`);
+      lines.push(`StructureID: ${state.currentStructure.id}`);
+      lines.push(`Generated: ${new Date().toLocaleString()}`);
+      lines.push('============================================================');
+
+      state.plotPoints.forEach(point => {
+        if (point.type === 'beat') {
+          lines.push(`[BEAT:${point.beatId}:${point.beatName.toUpperCase()}]`);
+          lines.push(point.content || 'Not yet written');
+          
+          if (point.chapters && point.chapters.length > 0) {
+            lines.push('CHAPTERS:');
+            point.chapters.forEach(chapter => {
+              const label = chapter.type === 'chapter' ? 
+                `Chapter ${getChapterNumber(chapter)}` : 
+                chapter.type.charAt(0).toUpperCase() + chapter.type.slice(1);
+              lines.push(`  [${chapter.internalOrder}] ${label}: ${chapter.title}`);
+              
+              if (chapter.notes) {
+                lines.push(`    📝 Notes: ${chapter.notes}`);
+              }
+              
+              if (chapter.todos && chapter.todos.length > 0) {
+                lines.push('    ✓ Todos:');
+                chapter.todos.forEach(todo => {
+                  const mark = todo.completed ? '✓' : ' ';
+                  lines.push(`      [${mark}] ${todo.text}`);
+                });
+              }
+            });
+          }
+        } else if (point.type === 'freeform') {
+          lines.push('[FREEFORM]');
+          lines.push(point.content);
+        } else if (point.type === 'freeform-anchor') {
+          lines.push(`[ANCHOR:${point.anchorType}]`);
+          lines.push(point.content);
+        }
+        lines.push('');
+      });
+
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.storyName || 'story'}-outline.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Import
+    function handleImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          parseImport(event.target.result);
+          render();
+        } catch (err) {
+          alert('Failed to import file: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      fileInput.value = '';
+    }
+
+    // Parse import
+    function parseImport(text) {
+      const lines = text.split('\n');
+      
+      if (!lines[0].includes('STORY_STRUCTURE_EXPORT')) {
+        throw new Error('Invalid file format');
+      }
+
+      // Extract metadata FIRST
+      const storyNameMatch = text.match(/StoryName: (.+)/);
+      const structureIdMatch = text.match(/StructureID: (.+)/);
+      
+      if (storyNameMatch) {
+        state.storyName = storyNameMatch[1].trim();
+        storyNameInput.value = state.storyName;
+      }
+      
+      // Detect and apply structure BEFORE parsing beats
+      if (structureIdMatch) {
+        const structId = structureIdMatch[1].trim();
+        const detectedStructure = STRUCTURES[structId] || STRUCTURES.freeform;
+        
+        // Apply the detected structure
+        state.currentStructure = detectedStructure;
+        state.mode = structId === 'freeform' ? 'freeform' : 'beat';
+        
+        // Hide structure selector if it's a beat structure
+        if (state.mode === 'beat') {
+          structureControls.classList.add('hidden');
+        }
+      }
+
+      // NOW parse plot points with the structure already loaded
+      state.plotPoints = [];
+      state.nextIdCounter = 0;
+      let currentPoint = null;
+      let currentChapter = null;
+      let inChapters = false;
+      let inTodos = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        if (line.startsWith('[BEAT:')) {
+          inChapters = false;
+          inTodos = false;
+          const match = line.match(/\[BEAT:(.+?):(.+?)\]/);
+          if (match) {
+            const beatId = match[1];
+            const beatName = match[2];
+            
+            // Find the beat in the current structure
+            const beatDef = state.currentStructure.beats?.find(b => b.id === beatId);
+            
+            currentPoint = {
+              id: state.nextIdCounter++,
+              type: 'beat',
+              beatId: beatId,
+              beatName: beatName,
+              beatPrompt: beatDef?.prompt || '',
+              beatPercentage: beatDef?.percentage || 0,
+              content: '',
+              locked: false, // Will be set to true if content is found
+              order: state.plotPoints.length,
+              editing: false,
+              chapters: [],
+              addingChapter: false
+            };
+            state.plotPoints.push(currentPoint);
+          }
+        } else if (line === 'CHAPTERS:') {
+          inChapters = true;
+          inTodos = false;
+        } else if (inChapters && line.match(/^\[\d+\]/)) {
+          inTodos = false;
+          const match = line.match(/\[(\d+)\] (.+?): (.+)/);
+          if (match && currentPoint) {
+            const internalOrder = parseInt(match[1]);
+            const label = match[2];
+            const title = match[3];
+            
+            let type = 'chapter';
+            if (label.toLowerCase().includes('prologue')) type = 'prologue';
+            else if (label.toLowerCase().includes('interlude')) type = 'interlude';
+            else if (label.toLowerCase().includes('epilogue')) type = 'epilogue';
+            
+            currentChapter = {
+              id: state.nextIdCounter++,
+              title: title,
+              type: type,
+              internalOrder: internalOrder,
+              notes: '',
+              todos: [],
+              editing: false,
+              editingNotes: false,
+              addingTodo: false
+            };
+            currentPoint.chapters.push(currentChapter);
+          }
+        } else if (line.startsWith('📝 Notes:') && currentChapter) {
+          currentChapter.notes = line.replace('📝 Notes:', '').trim();
+        } else if (line === '✓ Todos:') {
+          inTodos = true;
+        } else if (inTodos && line.match(/^\[[ ✓]\]/)) {
+          const completed = line.includes('[✓]');
+          const text = line.replace(/^\[[ ✓]\]/, '').trim();
+          if (currentChapter) {
+            currentChapter.todos.push({
+              id: state.nextIdCounter++,
+              text: text,
+              completed: completed,
+              editing: false
+            });
+          }
+        } else if (currentPoint && !inChapters && line && !line.startsWith('[') && line !== 'Not yet written') {
+          // Found content for the current beat
+          currentPoint.content = line;
+          currentPoint.locked = true; // Lock beats that have content
+        }
+      }
+
+      // Determine if chapters should be enabled
+      // Chapters are enabled if:
+      // 1. All beats have content (normal flow), OR
+      // 2. Any beat already has chapters (importing existing work)
+      const allBeatsComplete = state.plotPoints.length > 0 && 
+        state.plotPoints.every(p => p.content && p.content.trim() !== '');
+      const hasExistingChapters = state.plotPoints.some(p => p.chapters && p.chapters.length > 0);
+      state.chaptersEnabled = allBeatsComplete || hasExistingChapters;
+      
+      // Set current phase based on completion
+      if (state.mode === 'freeform') {
+        const hasStart = state.plotPoints.some(p => p.type === 'freeform-anchor' && p.anchorType === 'start');
+        const hasEnd = state.plotPoints.some(p => p.type === 'freeform-anchor' && p.anchorType === 'end');
+        
+        if (!hasStart) {
+          state.currentPhase = 'start';
+        } else if (!hasEnd) {
+          state.currentPhase = 'end';
+        } else {
+          state.currentPhase = 'filling';
+        }
+      } else {
+        state.currentPhase = allBeatsComplete ? 'complete' : 'filling';
+      }
+
+      autoSave();
+    }
+
+    // Get chapter number (visible numbering)
+    function getChapterNumber(chapter) {
+      let chapterNum = 0;
+      let found = false;
+      
+      for (let point of state.plotPoints) {
+        if (point.chapters) {
+          for (let ch of point.chapters) {
+            if (ch.type === 'chapter') chapterNum++;
+            if (ch.id === chapter.id) {
+              found = true;
+              break;
+            }
+          }
+          if (found) break;
+        }
+      }
+      
+      return chapterNum;
+    }
+
+    // Render
+    function render() {
+      renderStructureInfo();
+      renderInputSection();
+      renderTimeline();
+      renderProjections();
+    }
+
+    // Render structure info
+    function renderStructureInfo() {
+      if (state.currentStructure.id === 'freeform') {
+        structureInfo.classList.add('hidden');
+        return;
+      }
+
+      structureInfo.classList.remove('hidden');
+      structureInfo.innerHTML = `
+        <h3>${state.currentStructure.name}</h3>
+        <p>${state.currentStructure.description}</p>
+        ${state.currentStructure.examples ? 
+          `<p class="examples">Famous Examples: ${state.currentStructure.examples}</p>` : 
+          ''}
+      `;
+    }
+
+    // Render input section
+    function renderInputSection() {
+      // Freeform mode
+      if (state.mode === 'freeform') {
+        if (state.currentPhase === 'start') {
+          inputSection.classList.remove('hidden');
+          inputSection.innerHTML = `
+            <div class="prompt">What happens at the beginning?</div>
+            <textarea id="startInput"></textarea>
+            <div class="button-group">
+              <button id="submitStart" class="primary">Submit</button>
+            </div>
+          `;
+          
+          const startInput = document.getElementById('startInput');
+          const submitStart = document.getElementById('submitStart');
+          
+          submitStart.addEventListener('click', () => handleFreeformStart());
+          startInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+              handleFreeformStart();
+            }
+          });
+        } else if (state.currentPhase === 'end') {
+          inputSection.classList.remove('hidden');
+          inputSection.innerHTML = `
+            <div class="prompt">What happens at the end?</div>
+            <textarea id="endInput"></textarea>
+            <div class="button-group">
+              <button id="submitEnd" class="primary">Submit</button>
+            </div>
+          `;
+          
+          const endInput = document.getElementById('endInput');
+          const submitEnd = document.getElementById('submitEnd');
+          
+          submitEnd.addEventListener('click', () => handleFreeformEnd());
+          endInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+              handleFreeformEnd();
+            }
+          });
+        } else if (state.currentPhase === 'filling') {
+          const gap = findNextGap();
+          if (gap) {
+            const startPoint = state.plotPoints.find(p => p.id === gap.start);
+            const endPoint = state.plotPoints.find(p => p.id === gap.end);
+            
+            inputSection.classList.remove('hidden');
+            inputSection.innerHTML = `
+              <div class="prompt">What happens between these two points?</div>
+              <div style="font-style: italic; margin-bottom: 10px;">
+                <strong>Before:</strong> ${startPoint.content}<br>
+                <strong>After:</strong> ${endPoint.content}
+              </div>
+              <textarea id="middleInput"></textarea>
+              <div class="button-group">
+                <button id="submitMiddle" class="primary">Submit</button>
+                <button id="nothingNext">Nothing Happens Next</button>
+              </div>
+            `;
+            
+            const middleInput = document.getElementById('middleInput');
+            const submitMiddle = document.getElementById('submitMiddle');
+            const nothingNext = document.getElementById('nothingNext');
+            
+            submitMiddle.addEventListener('click', () => handleFreeformMiddle(gap));
+            nothingNext.addEventListener('click', () => handleNothingNext(gap));
+            middleInput.addEventListener('keypress', (e) => {
+              if (e.key === 'Enter' && e.ctrlKey) {
+                handleFreeformMiddle(gap);
+              }
+            });
+          } else {
+            inputSection.classList.add('hidden');
+            state.chaptersEnabled = true;
+            autoSave();
+          }
+        }
+      }
+      // Beat mode
+      else if (state.mode === 'beat') {
+        const nextBeat = findNextBeatToFill();
+        if (nextBeat) {
+          inputSection.classList.remove('hidden');
+          inputSection.innerHTML = `
+            <div class="prompt">${nextBeat.beatPrompt}</div>
+            <div style="font-weight: 600; margin-bottom: 10px;">${nextBeat.beatName}</div>
+            <textarea id="beatInput"></textarea>
+            <div class="button-group">
+              <button id="submitBeat" class="primary">Submit</button>
+            </div>
+          `;
+          
+          const beatInput = document.getElementById('beatInput');
+          const submitBeat = document.getElementById('submitBeat');
+          
+          submitBeat.addEventListener('click', () => handleBeatSubmit(nextBeat));
+          beatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+              handleBeatSubmit(nextBeat);
+            }
+          });
+        } else {
+          inputSection.classList.add('hidden');
+          state.chaptersEnabled = true;
+          autoSave();
+        }
+      }
+    }
+
+    // Handle freeform start
+    function handleFreeformStart() {
+      const input = document.getElementById('startInput').value.trim();
+      if (!input) return;
+
+      state.plotPoints.push({
+        id: state.nextIdCounter++,
+        type: 'freeform-anchor',
+        anchorType: 'start',
+        content: input,
+        locked: true,
+        order: 0,
+        editing: false,
+        chapters: [],
+        addingChapter: false
+      });
+
+      state.currentPhase = 'end';
+      autoSave();
+      render();
+    }
+
+    // Handle freeform end
+    function handleFreeformEnd() {
+      const input = document.getElementById('endInput').value.trim();
+      if (!input) return;
+
+      state.plotPoints.push({
+        id: state.nextIdCounter++,
+        type: 'freeform-anchor',
+        anchorType: 'end',
+        content: input,
+        locked: true,
+        order: 1,
+        editing: false,
+        chapters: [],
+        addingChapter: false
+      });
+
+      state.currentPhase = 'filling';
+      autoSave();
+      render();
+    }
+
+    // Handle freeform middle
+    function handleFreeformMiddle(gap) {
+      const input = document.getElementById('middleInput').value.trim();
+      if (!input) return;
+
+      const startPoint = state.plotPoints.find(p => p.id === gap.start);
+      const endPoint = state.plotPoints.find(p => p.id === gap.end);
+      const newOrder = (startPoint.order + endPoint.order) / 2;
+
+      state.plotPoints.push({
+        id: state.nextIdCounter++,
+        type: 'freeform',
+        content: input,
+        locked: true,
+        order: newOrder,
+        editing: false,
+        chapters: [],
+        addingChapter: false
+      });
+
+      autoSave();
+      render();
+    }
+
+    // Handle nothing next
+    function handleNothingNext(gap) {
+      // Mark gap as closed without adding a point
+      // In freeform, we just skip this gap
+      render();
+    }
+
+    // Handle beat submit
+    function handleBeatSubmit(beat) {
+      const input = document.getElementById('beatInput').value.trim();
+      if (!input) return;
+
+      const point = state.plotPoints.find(p => p.beatId === beat.beatId);
+      if (point) {
+        point.content = input;
+        point.locked = true;
+      }
+
+      autoSave();
+      render();
+    }
+
+    // Find next gap (freeform)
+    function findNextGap() {
+      const filled = state.plotPoints
+        .filter(p => p.content)
+        .sort((a, b) => a.order - b.order);
+
+      if (filled.length < 2) return null;
+
+      const gaps = [];
+      for (let i = 0; i < filled.length - 1; i++) {
+        gaps.push({
+          start: filled[i].id,
+          end: filled[i + 1].id
+        });
+      }
+
+      // Return rightmost gap
+      return gaps.length > 0 ? gaps[gaps.length - 1] : null;
+    }
+
+    // Find next beat to fill
+    function findNextBeatToFill() {
+      // In beat mode, we fill beats in the recursive bisection order
+      // Start with first and last, then fill rightmost gaps
+      const filledIndices = state.plotPoints
+        .map((p, idx) => p.content ? idx : -1)
+        .filter(idx => idx !== -1)
+        .sort((a, b) => a - b);
+
+      // No beats filled yet - fill first beat
+      if (filledIndices.length === 0) {
+        return state.plotPoints[0];
+      }
+
+      // Only first beat filled - fill last beat
+      if (filledIndices.length === 1 && filledIndices[0] === 0) {
+        return state.plotPoints[state.plotPoints.length - 1];
+      }
+
+      // Find unfilled beats between filled ones
+      const gaps = [];
+      for (let i = 0; i < filledIndices.length - 1; i++) {
+        const start = filledIndices[i];
+        const end = filledIndices[i + 1];
+        if (end - start > 1) {
+          const middle = Math.floor((start + end) / 2);
+          gaps.push({ start, end, middle });
+        }
+      }
+
+      if (gaps.length === 0) return null;
+
+      // Return rightmost gap
+      const rightmost = gaps.reduce((r, g) => g.middle > r.middle ? g : r);
+      return state.plotPoints[rightmost.middle];
+    }
+
+    // Render timeline
+    function renderTimeline() {
+      const points = state.plotPoints.sort((a, b) => a.order - b.order);
+      
+      timeline.innerHTML = points.map(point => {
+        if (point.type === 'beat') {
+          return renderBeatCard(point);
+        } else {
+          return renderFreeformCard(point);
+        }
+      }).join('');
+    }
+
+    // Render beat card
+    function renderBeatCard(beat) {
+      const isFilled = beat.content;
+      const isLocked = beat.locked;
+      
+      // Calculate chapter projection for this beat
+      let projectionInfo = '';
+      if (state.chaptersEnabled && beat.beatPercentage && beat.beatPercentage > 0) {
+        const firstBeatWithChapters = state.plotPoints.find(p => p.chapters && p.chapters.length > 0 && p.beatPercentage > 0);
+        if (firstBeatWithChapters) {
+          const chaptersPerPercent = firstBeatWithChapters.chapters.length / firstBeatWithChapters.beatPercentage;
+          const expected = Math.round(beat.beatPercentage * chaptersPerPercent);
+          const actual = beat.chapters ? beat.chapters.length : 0;
+          
+          let statusClass = '';
+          let statusIcon = '✓';
+          if (actual > expected * 1.5) {
+            statusClass = 'danger';
+            statusIcon = '🔴';
+          } else if (actual > expected * 1.2) {
+            statusClass = 'warning';
+            statusIcon = '⚠️';
+          }
+          
+          projectionInfo = `
+            <div style="font-size: 13px; color: var(--brown-dark); margin-top: 4px; font-weight: normal;">
+              ${statusIcon} ${actual} / ${expected} chapters expected
+            </div>
+          `;
+        }
+      }
+      
+      return `
+        <div class="plot-point ${!isFilled ? 'unfilled' : ''}">
+          <div class="beat-card">
+            <div class="beat-header">
+              <div>
+                <div class="beat-title">${beat.beatName}</div>
+                ${projectionInfo}
+              </div>
+              <div class="beat-actions">
+                ${isFilled && !beat.editing ? `
+                  <button class="small" onclick="editBeat(${beat.id})">Edit</button>
+                  ${isLocked ? `
+                    <button class="small" onclick="unlockBeat(${beat.id})">🔒 Unlock</button>
+                  ` : ''}
+                ` : ''}
+              </div>
+            </div>
+            ${beat.editing ? `
+              <div class="inline-form">
+                <textarea id="editBeat-${beat.id}">${beat.content}</textarea>
+                <div class="form-row">
+                  <button class="primary" onclick="saveBeatEdit(${beat.id})">Save</button>
+                  <button onclick="cancelBeatEdit(${beat.id})">Cancel</button>
+                </div>
+              </div>
+            ` : `
+              <div class="beat-content ${!isFilled ? 'unfilled' : ''}">
+                ${isFilled ? beat.content : 'Not yet written'}
+              </div>
+            `}
+            ${state.chaptersEnabled && isFilled ? renderChapters(beat) : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render freeform card
+    function renderFreeformCard(point) {
+      const label = point.type === 'freeform-anchor' ? 
+        (point.anchorType === 'start' ? 'BEGINNING' : 'END') : 
+        'PLOT POINT';
+      
+      return `
+        <div class="plot-point">
+          <div class="freeform-card">
+            <div class="beat-header">
+              <div class="beat-title">${label}</div>
+              <div class="beat-actions">
+                ${!point.editing ? `
+                  <button class="small" onclick="editFreeform(${point.id})">Edit</button>
+                  ${point.locked ? `
+                    <button class="small" onclick="unlockFreeform(${point.id})">🔒 Unlock</button>
+                  ` : ''}
+                ` : ''}
+              </div>
+            </div>
+            ${point.editing ? `
+              <div class="inline-form">
+                <textarea id="editFreeform-${point.id}">${point.content}</textarea>
+                <div class="form-row">
+                  <button class="primary" onclick="saveFreeformEdit(${point.id})">Save</button>
+                  <button onclick="cancelFreeformEdit(${point.id})">Cancel</button>
+                </div>
+              </div>
+            ` : `
+              <div class="beat-content">${point.content}</div>
+            `}
+            ${state.chaptersEnabled ? renderChapters(point) : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render chapters
+    function renderChapters(point) {
+      const chapters = point.chapters || [];
+      
+      return `
+        <div class="chapters-section">
+          ${chapters.map((ch, idx) => renderChapter(ch, point.id, idx)).join('')}
+          ${point.addingChapter ? `
+            <div class="inline-form">
+              <select id="chapterType-${point.id}">
+                <option value="chapter">Chapter</option>
+                <option value="prologue">Prologue</option>
+                <option value="interlude">Interlude</option>
+                <option value="epilogue">Epilogue</option>
+              </select>
+              <input type="text" id="chapterTitle-${point.id}" placeholder="Chapter title">
+              <div class="form-row">
+                <button class="primary" onclick="saveNewChapter(${point.id})">Add</button>
+                <button onclick="cancelNewChapter(${point.id})">Cancel</button>
+              </div>
+            </div>
+          ` : `
+            <button class="small" onclick="addChapter(${point.id})">+ Add Chapter</button>
+          `}
+        </div>
+      `;
+    }
+
+    // Render chapter
+    function renderChapter(chapter, pointId, chapterIndex) {
+      const chapterNum = chapter.type === 'chapter' ? getChapterNumber(chapter) : null;
+      const label = chapter.type === 'chapter' ? `Chapter ${chapterNum}` : 
+        chapter.type.charAt(0).toUpperCase() + chapter.type.slice(1);
+      
+      return `
+        <div class="chapter-item" id="chapter-${chapter.id}">
+          <div class="chapter-header">
+            ${chapter.editing ? `
+              <input type="text" id="editChapterTitle-${chapter.id}" value="${chapter.title}" style="flex: 1;">
+            ` : `
+              <div class="chapter-title">${label}: ${chapter.title}</div>
+            `}
+            <div class="chapter-actions">
+              ${chapter.editing ? `
+                <button class="small icon-only" onclick="saveChapterEdit(${pointId}, ${chapter.id})">✓</button>
+                <button class="small icon-only" onclick="cancelChapterEdit(${pointId}, ${chapter.id})">✗</button>
+              ` : `
+                ${chapterIndex > 0 ? `
+                  <button class="small icon-only" onclick="moveChapter(${pointId}, ${chapterIndex}, -1)">▲</button>
+                ` : ''}
+                ${chapterIndex < getChapterCount(pointId) - 1 ? `
+                  <button class="small icon-only" onclick="moveChapter(${pointId}, ${chapterIndex}, 1)">▼</button>
+                ` : ''}
+                <button class="small icon-only" onclick="editChapter(${pointId}, ${chapter.id})">✎</button>
+                <button class="small icon-only danger" onclick="deleteChapter(${pointId}, ${chapter.id})">×</button>
+              `}
+            </div>
+          </div>
+          ${chapter.notes ? `
+            ${chapter.editingNotes ? `
+              <div class="inline-form">
+                <textarea id="editNotes-${chapter.id}">${chapter.notes}</textarea>
+                <div class="form-row">
+                  <button class="small primary" onclick="saveNotes(${pointId}, ${chapter.id})">Save</button>
+                  <button class="small" onclick="cancelNotes(${pointId}, ${chapter.id})">Cancel</button>
+                </div>
+              </div>
+            ` : `
+              <div class="chapter-notes">
+                <strong>Notes:</strong> ${chapter.notes}
+                <button class="small" onclick="editNotes(${pointId}, ${chapter.id})">Edit</button>
+              </div>
+            `}
+          ` : `
+            ${!chapter.editingNotes ? `
+              <button class="small" onclick="addNotes(${pointId}, ${chapter.id})">+ Note</button>
+            ` : `
+              <div class="inline-form">
+                <textarea id="editNotes-${chapter.id}" placeholder="Chapter notes"></textarea>
+                <div class="form-row">
+                  <button class="small primary" onclick="saveNotes(${pointId}, ${chapter.id})">Save</button>
+                  <button class="small" onclick="cancelNotes(${pointId}, ${chapter.id})">Cancel</button>
+                </div>
+              </div>
+            `}
+          `}
+          ${renderTodos(chapter, pointId)}
+        </div>
+      `;
+    }
+
+    // Render todos
+    function renderTodos(chapter, pointId) {
+      const todos = chapter.todos || [];
+      
+      return `
+        <div class="todos-list">
+          ${todos.map((todo, idx) => `
+            <div class="todo-item ${todo.completed ? 'completed' : ''}">
+              <input type="checkbox" ${todo.completed ? 'checked' : ''} 
+                onchange="toggleTodo(${pointId}, ${chapter.id}, ${todo.id})">
+              ${todo.editing ? `
+                <input type="text" id="editTodo-${todo.id}" value="${todo.text}" class="todo-text">
+                <div class="todo-actions">
+                  <button class="small icon-only" onclick="saveTodoEdit(${pointId}, ${chapter.id}, ${todo.id})">✓</button>
+                  <button class="small icon-only" onclick="cancelTodoEdit(${pointId}, ${chapter.id}, ${todo.id})">✗</button>
+                </div>
+              ` : `
+                <span class="todo-text">${todo.text}</span>
+                <div class="todo-actions">
+                  ${idx > 0 ? `
+                    <button class="small icon-only" onclick="moveTodo(${pointId}, ${chapter.id}, ${idx}, -1)">▲</button>
+                  ` : ''}
+                  ${idx < todos.length - 1 ? `
+                    <button class="small icon-only" onclick="moveTodo(${pointId}, ${chapter.id}, ${idx}, 1)">▼</button>
+                  ` : ''}
+                  <button class="small icon-only" onclick="editTodo(${pointId}, ${chapter.id}, ${todo.id})">✎</button>
+                  <button class="small icon-only danger" onclick="deleteTodo(${pointId}, ${chapter.id}, ${todo.id})">×</button>
+                </div>
+              `}
+            </div>
+          `).join('')}
+          ${chapter.addingTodo ? `
+            <div class="inline-form">
+              <input type="text" id="newTodo-${chapter.id}" placeholder="Todo item">
+              <div class="form-row">
+                <button class="small primary" onclick="saveNewTodo(${pointId}, ${chapter.id})">Add</button>
+                <button class="small" onclick="cancelNewTodo(${pointId}, ${chapter.id})">Cancel</button>
+              </div>
+            </div>
+          ` : `
+            <button class="small" onclick="addTodo(${pointId}, ${chapter.id})">+ Todo</button>
+          `}
+        </div>
+      `;
+    }
+
+    // Render projections
+    function renderProjections() {
+      if (!state.chaptersEnabled || state.mode === 'freeform') {
+        projections.classList.add('hidden');
+        return;
+      }
+
+      const firstBeatWithChapters = state.plotPoints.find(p => p.chapters && p.chapters.length > 0 && p.beatPercentage > 0);
+      if (!firstBeatWithChapters) {
+        projections.classList.add('hidden');
+        return;
+      }
+
+      const chaptersPerPercent = firstBeatWithChapters.chapters.length / firstBeatWithChapters.beatPercentage;
+      const projectedTotal = Math.round(chaptersPerPercent * 100);
+      
+      let totalChapters = 0;
+      state.plotPoints.forEach(p => {
+        if (p.chapters) totalChapters += p.chapters.length;
+      });
+
+      projections.classList.remove('hidden');
+      projections.innerHTML = `
+        <h3>📊 Story Pacing Overview</h3>
+        <div class="projection-summary">
+          <strong>${totalChapters}</strong> chapters written → Projected total: <strong>~${projectedTotal}</strong> chapters<br>
+          Based on <em>${firstBeatWithChapters.beatName}</em> pace (${firstBeatWithChapters.chapters.length} chapters = ${chaptersPerPercent.toFixed(2)} chapters per percentage point)
+        </div>
+        <button class="small" id="toggleProjectionDetails" style="margin-top: 10px;">
+          <span id="toggleIcon">▼</span> Show Breakdown by Beat
+        </button>
+        <div id="projectionDetails" class="hidden" style="margin-top: 15px;">
+          ${state.plotPoints.map(point => {
+            if (!point.beatPercentage || point.beatPercentage === 0) return '';
+            
+            const expected = Math.round(point.beatPercentage * chaptersPerPercent);
+            const actual = point.chapters ? point.chapters.length : 0;
+            
+            let status = 'on-track';
+            let statusText = '✓ On track';
+            if (actual > expected * 1.5) {
+              status = 'danger';
+              statusText = '🔴 Much longer';
+            } else if (actual > expected * 1.2) {
+              status = 'warning';
+              statusText = '⚠️ Running long';
+            }
+            
+            return `
+              <div class="projection-beat ${status}">
+                <div class="projection-beat-name">${point.beatName}</div>
+                <div class="projection-beat-stats">
+                  ${actual} chapters ${statusText} (expected ${expected})
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+      
+      // Add toggle listener
+      document.getElementById('toggleProjectionDetails')?.addEventListener('click', () => {
+        const details = document.getElementById('projectionDetails');
+        const icon = document.getElementById('toggleIcon');
+        const button = document.getElementById('toggleProjectionDetails');
+        
+        if (details.classList.contains('hidden')) {
+          details.classList.remove('hidden');
+          icon.textContent = '▲';
+          button.innerHTML = '<span id="toggleIcon">▲</span> Hide Breakdown';
+        } else {
+          details.classList.add('hidden');
+          icon.textContent = '▼';
+          button.innerHTML = '<span id="toggleIcon">▼</span> Show Breakdown by Beat';
+        }
+      });
+    }
+
+    // Beat editing functions
+    window.editBeat = function(id) {
+      const point = state.plotPoints.find(p => p.id === id);
+      if (!point || point.locked) return;
+      point.editing = true;
+      render();
+      document.getElementById(`editBeat-${id}`)?.focus();
+    };
+
+    window.saveBeatEdit = function(id) {
+      const point = state.plotPoints.find(p => p.id === id);
+      const input = document.getElementById(`editBeat-${id}`);
+      if (point && input) {
+        point.content = input.value.trim();
+        point.editing = false;
+        point.locked = true;
+        autoSave();
+        render();
+      }
+    };
+
+    window.cancelBeatEdit = function(id) {
+      const point = state.plotPoints.find(p => p.id === id);
+      if (point) {
+        point.editing = false;
+        render();
+      }
+    };
+
+    window.unlockBeat = function(id) {
+      const point = state.plotPoints.find(p => p.id === id);
+      if (point) {
+        point.locked = false;
+        render();
+      }
+    };
+
+    // Freeform editing functions
+    window.editFreeform = function(id) {
+      const point = state.plotPoints.find(p => p.id === id);
+      if (!point || point.locked) return;
+      point.editing = true;
+      render();
+      document.getElementById(`editFreeform-${id}`)?.focus();
+    };
+
+    window.saveFreeformEdit = function(id) {
+      const point = state.plotPoints.find(p => p.id === id);
+      const input = document.getElementById(`editFreeform-${id}`);
+      if (point && input) {
+        point.content = input.value.trim();
+        point.editing = false;
+        point.locked = true;
+        autoSave();
+        render();
+      }
+    };
+
+    window.cancelFreeformEdit = function(id) {
+      const point = state.plotPoints.find(p => p.id === id);
+      if (point) {
+        point.editing = false;
+        render();
+      }
+    };
+
+    window.unlockFreeform = function(id) {
+      const point = state.plotPoints.find(p => p.id === id);
+      if (point) {
+        point.locked = false;
+        render();
+      }
+    };
+
+    // Chapter functions
+    window.addChapter = function(pointId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      if (point) {
+        point.addingChapter = true;
+        render();
+        document.getElementById(`chapterTitle-${pointId}`)?.focus();
+      }
+    };
+
+    window.saveNewChapter = function(pointId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const typeSelect = document.getElementById(`chapterType-${pointId}`);
+      const titleInput = document.getElementById(`chapterTitle-${pointId}`);
+      
+      if (point && titleInput && titleInput.value.trim()) {
+        if (!point.chapters) point.chapters = [];
+        
+        const maxInternalOrder = Math.max(
+          0,
+          ...state.plotPoints.flatMap(p => p.chapters || []).map(ch => ch.internalOrder)
+        );
+        
+        point.chapters.push({
+          id: state.nextIdCounter++,
+          title: titleInput.value.trim(),
+          type: typeSelect.value,
+          internalOrder: maxInternalOrder + 1,
+          notes: '',
+          todos: [],
+          editing: false,
+          editingNotes: false,
+          addingTodo: false
+        });
+        
+        point.addingChapter = false;
+        autoSave();
+        render();
+      }
+    };
+
+    window.cancelNewChapter = function(pointId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      if (point) {
+        point.addingChapter = false;
+        render();
+      }
+    };
+
+    window.editChapter = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      if (chapter) {
+        chapter.editing = true;
+        render();
+        document.getElementById(`editChapterTitle-${chapterId}`)?.focus();
+      }
+    };
+
+    window.saveChapterEdit = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      const input = document.getElementById(`editChapterTitle-${chapterId}`);
+      
+      if (chapter && input) {
+        chapter.title = input.value.trim();
+        chapter.editing = false;
+        autoSave();
+        render();
+      }
+    };
+
+    window.cancelChapterEdit = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      if (chapter) {
+        chapter.editing = false;
+        render();
+      }
+    };
+
+    window.deleteChapter = function(pointId, chapterId) {
+      if (!confirm('Delete this chapter?')) return;
+      
+      const point = state.plotPoints.find(p => p.id === pointId);
+      if (point && point.chapters) {
+        point.chapters = point.chapters.filter(ch => ch.id !== chapterId);
+        autoSave();
+        render();
+      }
+    };
+
+    window.moveChapter = function(pointId, chapterIndex, direction) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      if (!point || !point.chapters) return;
+      
+      const newIndex = chapterIndex + direction;
+      if (newIndex < 0 || newIndex >= point.chapters.length) return;
+      
+      const chapter = point.chapters[chapterIndex];
+      point.chapters.splice(chapterIndex, 1);
+      point.chapters.splice(newIndex, 0, chapter);
+      
+      autoSave();
+      render();
+    };
+
+    window.getChapterCount = function(pointId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      return point?.chapters?.length || 0;
+    };
+
+    // Notes functions
+    window.addNotes = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      if (chapter) {
+        chapter.editingNotes = true;
+        render();
+        document.getElementById(`editNotes-${chapterId}`)?.focus();
+      }
+    };
+
+    window.editNotes = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      if (chapter) {
+        chapter.editingNotes = true;
+        render();
+        document.getElementById(`editNotes-${chapterId}`)?.focus();
+      }
+    };
+
+    window.saveNotes = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      const input = document.getElementById(`editNotes-${chapterId}`);
+      
+      if (chapter && input) {
+        chapter.notes = input.value.trim();
+        chapter.editingNotes = false;
+        autoSave();
+        render();
+      }
+    };
+
+    window.cancelNotes = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      if (chapter) {
+        chapter.editingNotes = false;
+        render();
+      }
+    };
+
+    // Todo functions
+    window.addTodo = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      if (chapter) {
+        chapter.addingTodo = true;
+        render();
+        document.getElementById(`newTodo-${chapterId}`)?.focus();
+      }
+    };
+
+    window.saveNewTodo = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      const input = document.getElementById(`newTodo-${chapterId}`);
+      
+      if (chapter && input && input.value.trim()) {
+        if (!chapter.todos) chapter.todos = [];
+        chapter.todos.push({
+          id: state.nextIdCounter++,
+          text: input.value.trim(),
+          completed: false,
+          editing: false
+        });
+        chapter.addingTodo = false;
+        autoSave();
+        render();
+      }
+    };
+
+    window.cancelNewTodo = function(pointId, chapterId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      if (chapter) {
+        chapter.addingTodo = false;
+        render();
+      }
+    };
+
+    window.toggleTodo = function(pointId, chapterId, todoId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      const todo = chapter?.todos?.find(t => t.id === todoId);
+      
+      if (todo) {
+        todo.completed = !todo.completed;
+        autoSave();
+        render();
+      }
+    };
+
+    window.editTodo = function(pointId, chapterId, todoId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      const todo = chapter?.todos?.find(t => t.id === todoId);
+      
+      if (todo) {
+        todo.editing = true;
+        render();
+        document.getElementById(`editTodo-${todoId}`)?.focus();
+      }
+    };
+
+    window.saveTodoEdit = function(pointId, chapterId, todoId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      const todo = chapter?.todos?.find(t => t.id === todoId);
+      const input = document.getElementById(`editTodo-${todoId}`);
+      
+      if (todo && input) {
+        todo.text = input.value.trim();
+        todo.editing = false;
+        autoSave();
+        render();
+      }
+    };
+
+    window.cancelTodoEdit = function(pointId, chapterId, todoId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      const todo = chapter?.todos?.find(t => t.id === todoId);
+      
+      if (todo) {
+        todo.editing = false;
+        render();
+      }
+    };
+
+    window.deleteTodo = function(pointId, chapterId, todoId) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      
+      if (chapter && chapter.todos) {
+        chapter.todos = chapter.todos.filter(t => t.id !== todoId);
+        autoSave();
+        render();
+      }
+    };
+
+    window.moveTodo = function(pointId, chapterId, todoIndex, direction) {
+      const point = state.plotPoints.find(p => p.id === pointId);
+      const chapter = point?.chapters?.find(ch => ch.id === chapterId);
+      if (!chapter || !chapter.todos) return;
+      
+      const newIndex = todoIndex + direction;
+      if (newIndex < 0 || newIndex >= chapter.todos.length) return;
+      
+      const todo = chapter.todos[todoIndex];
+      chapter.todos.splice(todoIndex, 1);
+      chapter.todos.splice(newIndex, 0, todo);
+      
+      autoSave();
+      render();
+    };
+
+    // Add Enter key support to all forms
+    document.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+        const target = e.target;
+        
+        // Handle input fields (not textareas)
+        if (target.tagName === 'INPUT' && target.type === 'text') {
+          e.preventDefault();
+          
+          // Find the nearest primary button
+          const form = target.closest('.inline-form') || target.closest('.input-section');
+          const primaryBtn = form?.querySelector('button.primary');
+          if (primaryBtn) {
+            primaryBtn.click();
+          }
+        }
+      }
+    });
+
+    // Initialize app
+    init();
+  </script>
+</body>
+</html>
