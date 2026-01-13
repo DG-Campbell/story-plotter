@@ -358,11 +358,21 @@
       margin-bottom: 10px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
       transition: all 0.2s ease;
+      cursor: move;
     }
 
-    .chapter-item.moving {
+    .chapter-item:hover {
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    }
+
+    .chapter-item.dragging {
       opacity: 0.5;
-      transform: scale(0.98);
+      transform: rotate(2deg);
+    }
+
+    .chapter-item.drag-over {
+      border-top: 3px solid var(--gold);
+      padding-top: 11px;
     }
 
     .chapter-header {
@@ -1514,6 +1524,103 @@
           return renderFreeformCard(point);
         }
       }).join('');
+      
+      // Setup drag-and-drop for chapters
+      setupChapterDragAndDrop();
+    }
+    
+    // Setup drag-and-drop for chapters
+    function setupChapterDragAndDrop() {
+      const chapterItems = document.querySelectorAll('.chapter-item');
+      
+      chapterItems.forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragleave', handleDragLeave);
+      });
+    }
+    
+    let draggedChapter = null;
+    
+    function handleDragStart(e) {
+      draggedChapter = {
+        id: parseInt(this.dataset.chapterId),
+        pointId: parseInt(this.dataset.pointId),
+        index: parseInt(this.dataset.chapterIndex)
+      };
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+    
+    function handleDragEnd(e) {
+      this.classList.remove('dragging');
+      document.querySelectorAll('.chapter-item').forEach(item => {
+        item.classList.remove('drag-over');
+      });
+      draggedChapter = null;
+    }
+    
+    function handleDragOver(e) {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      e.dataTransfer.dropEffect = 'move';
+      
+      // Add visual indicator
+      this.classList.add('drag-over');
+      
+      return false;
+    }
+    
+    function handleDragLeave(e) {
+      this.classList.remove('drag-over');
+    }
+    
+    function handleDrop(e) {
+      if (e.stopPropagation) {
+        e.stopPropagation();
+      }
+      
+      this.classList.remove('drag-over');
+      
+      if (!draggedChapter) return;
+      
+      const targetPointId = parseInt(this.dataset.pointId);
+      const targetIndex = parseInt(this.dataset.chapterIndex);
+      
+      // Don't do anything if dropping on itself
+      if (draggedChapter.pointId === targetPointId && draggedChapter.index === targetIndex) {
+        return;
+      }
+      
+      // Find source and target points
+      const sourcePoint = state.plotPoints.find(p => p.id === draggedChapter.pointId);
+      const targetPoint = state.plotPoints.find(p => p.id === targetPointId);
+      
+      if (!sourcePoint || !targetPoint) return;
+      
+      // Get the chapter being moved
+      const chapter = sourcePoint.chapters[draggedChapter.index];
+      
+      // Remove from source
+      sourcePoint.chapters.splice(draggedChapter.index, 1);
+      
+      // Add to target
+      if (draggedChapter.pointId === targetPointId) {
+        // Same beat - adjust index if needed
+        const newIndex = targetIndex > draggedChapter.index ? targetIndex : targetIndex;
+        targetPoint.chapters.splice(newIndex, 0, chapter);
+      } else {
+        // Different beat
+        targetPoint.chapters.splice(targetIndex, 0, chapter);
+      }
+      
+      autoSave();
+      render();
+      
+      return false;
     }
 
     // Render beat card
@@ -1656,7 +1763,10 @@
         chapter.type.charAt(0).toUpperCase() + chapter.type.slice(1);
       
       return `
-        <div class="chapter-item" id="chapter-${chapter.id}">
+        <div class="chapter-item" id="chapter-${chapter.id}" draggable="true" 
+             data-chapter-id="${chapter.id}" 
+             data-point-id="${pointId}" 
+             data-chapter-index="${chapterIndex}">
           <div class="chapter-header">
             ${chapter.editing ? `
               <input type="text" id="editChapterTitle-${chapter.id}" value="${chapter.title}" style="flex: 1;">
@@ -2182,16 +2292,16 @@
 
     // Add Enter key support to all forms
     document.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         const target = e.target;
         
-        // Handle input fields (not textareas)
-        if (target.tagName === 'INPUT' && target.type === 'text') {
+        // For both inputs and textareas, Enter submits
+        if ((target.tagName === 'INPUT' && target.type === 'text') || target.tagName === 'TEXTAREA') {
           e.preventDefault();
           
-          // Find the nearest primary button
+          // Find the nearest primary button or any submit button
           const form = target.closest('.inline-form') || target.closest('.input-section');
-          const primaryBtn = form?.querySelector('button.primary');
+          const primaryBtn = form?.querySelector('button.primary') || form?.querySelector('button[id^="submit"]');
           if (primaryBtn) {
             primaryBtn.click();
           }
