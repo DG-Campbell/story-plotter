@@ -83,8 +83,9 @@
 
     .header-top {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
+      gap: 15px;
       margin-bottom: 15px;
     }
 
@@ -94,11 +95,15 @@
       font-weight: 700;
       color: var(--leather);
       letter-spacing: 0.5px;
+      text-align: center;
+      white-space: nowrap;
     }
 
     .header-buttons {
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     /* Buttons */
@@ -160,7 +165,8 @@
 
     /* Input Fields */
     input[type="text"],
-    textarea {
+    textarea,
+    select {
       font-family: var(--font-body);
       font-size: 15px;
       padding: 10px 14px;
@@ -173,10 +179,22 @@
     }
 
     input[type="text"]:focus,
-    textarea:focus {
+    textarea:focus,
+    select:focus {
       outline: none;
       border-color: var(--gold);
       box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+    }
+
+    select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235d4e37' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 35px;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
     }
 
     textarea {
@@ -672,6 +690,7 @@
           <button id="driveSignInBtn" class="hidden">📂 Sign in to Drive</button>
           <button id="driveLoadBtn" class="hidden">📂 Load from Drive</button>
           <button id="driveSaveBtn" class="hidden">💾 Save to Drive</button>
+          <button id="driveSignOutBtn" class="hidden">🚪 Sign Out</button>
           <button id="importBtn">📁 Import</button>
           <button id="exportBtn">📄 Export</button>
           <button id="newStoryBtn">New Story</button>
@@ -865,6 +884,7 @@
     const driveSignInBtn = document.getElementById('driveSignInBtn');
     const driveLoadBtn = document.getElementById('driveLoadBtn');
     const driveSaveBtn = document.getElementById('driveSaveBtn');
+    const driveSignOutBtn = document.getElementById('driveSignOutBtn');
 
     // Initialize
     function init() {
@@ -1801,7 +1821,15 @@
              data-chapter-index="${chapterIndex}">
           <div class="chapter-header">
             ${chapter.editing ? `
-              <input type="text" id="editChapterTitle-${chapter.id}" value="${chapter.title}" style="flex: 1;">
+              <div style="flex: 1; display: flex; gap: 8px;">
+                <select id="editChapterType-${chapter.id}" style="width: auto; min-width: 120px;">
+                  <option value="chapter" ${chapter.type === 'chapter' ? 'selected' : ''}>Chapter</option>
+                  <option value="prologue" ${chapter.type === 'prologue' ? 'selected' : ''}>Prologue</option>
+                  <option value="interlude" ${chapter.type === 'interlude' ? 'selected' : ''}>Interlude</option>
+                  <option value="epilogue" ${chapter.type === 'epilogue' ? 'selected' : ''}>Epilogue</option>
+                </select>
+                <input type="text" id="editChapterTitle-${chapter.id}" value="${chapter.title}" style="flex: 1;">
+              </div>
             ` : `
               <div class="chapter-title">${label}: ${chapter.title}</div>
             `}
@@ -2122,10 +2150,14 @@
     window.saveChapterEdit = function(pointId, chapterId) {
       const point = state.plotPoints.find(p => p.id === pointId);
       const chapter = point?.chapters?.find(ch => ch.id === chapterId);
-      const input = document.getElementById(`editChapterTitle-${chapterId}`);
+      const titleInput = document.getElementById(`editChapterTitle-${chapterId}`);
+      const typeSelect = document.getElementById(`editChapterType-${chapterId}`);
       
-      if (chapter && input) {
-        chapter.title = input.value.trim();
+      if (chapter && titleInput) {
+        chapter.title = titleInput.value.trim();
+        if (typeSelect) {
+          chapter.type = typeSelect.value;
+        }
         chapter.editing = false;
         autoSave();
         render();
@@ -2409,7 +2441,16 @@
     function maybeEnableDriveButtons() {
       if (gapiInited && gisInited) {
         console.log('Google Drive integration ready!');
-        driveSignInBtn.classList.remove('hidden');
+        
+        // Try to restore saved token
+        const restored = restoreSavedToken();
+        
+        // Show sign in button if no token was restored
+        if (!restored) {
+          driveSignInBtn.classList.remove('hidden');
+        } else {
+          driveSignOutBtn.classList.remove('hidden');
+        }
       }
     }
     
@@ -2419,9 +2460,18 @@
           throw (resp);
         }
         accessToken = gapi.client.getToken().access_token;
+        
+        // Store token with expiry
+        const tokenData = {
+          token: accessToken,
+          expiry: Date.now() + (3600 * 1000) // 1 hour from now
+        };
+        localStorage.setItem('googleDriveToken', JSON.stringify(tokenData));
+        
         driveSignInBtn.classList.add('hidden');
         driveLoadBtn.classList.remove('hidden');
         driveSaveBtn.classList.remove('hidden');
+        driveSignOutBtn.classList.remove('hidden');
       };
 
       if (gapi.client.getToken() === null) {
@@ -2429,6 +2479,53 @@
       } else {
         tokenClient.requestAccessToken({prompt: ''});
       }
+    }
+    
+    // Try to restore saved token
+    function restoreSavedToken() {
+      const savedToken = localStorage.getItem('googleDriveToken');
+      if (!savedToken) return false;
+      
+      try {
+        const tokenData = JSON.parse(savedToken);
+        
+        // Check if token is still valid
+        if (Date.now() < tokenData.expiry) {
+          gapi.client.setToken({ access_token: tokenData.token });
+          accessToken = tokenData.token;
+          
+          driveSignInBtn.classList.add('hidden');
+          driveLoadBtn.classList.remove('hidden');
+          driveSaveBtn.classList.remove('hidden');
+          
+          console.log('Google Drive token restored from storage');
+          return true;
+        } else {
+          // Token expired, remove it
+          localStorage.removeItem('googleDriveToken');
+          console.log('Saved token expired');
+        }
+      } catch (e) {
+        console.error('Error restoring token:', e);
+        localStorage.removeItem('googleDriveToken');
+      }
+      
+      return false;
+    }
+    
+    function handleSignOut() {
+      // Clear token from storage and state
+      localStorage.removeItem('googleDriveToken');
+      accessToken = null;
+      gapi.client.setToken(null);
+      
+      // Update UI
+      driveSignInBtn.classList.remove('hidden');
+      driveLoadBtn.classList.add('hidden');
+      driveSaveBtn.classList.add('hidden');
+      driveSignOutBtn.classList.add('hidden');
+      
+      console.log('Signed out of Google Drive');
     }
     
     async function saveToDrive() {
@@ -2641,6 +2738,7 @@
     driveSignInBtn.addEventListener('click', handleAuthClick);
     driveSaveBtn.addEventListener('click', saveToDrive);
     driveLoadBtn.addEventListener('click', loadFromDrive);
+    driveSignOutBtn.addEventListener('click', handleSignOut);
     
     // Load Google APIs - these will call gapiLoaded/gisLoaded when ready
     window.gapiLoaded = gapiLoaded;
