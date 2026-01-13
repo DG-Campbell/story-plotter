@@ -2505,9 +2505,11 @@
         
         const files = response.result.files;
         let fileId = null;
+        let isUpdate = false;
         
         if (files && files.length > 0) {
           fileId = files[0].id;
+          isUpdate = true;
         }
         
         const metadata = {
@@ -2537,10 +2539,17 @@
           });
         }
         
-        if (uploadResponse.ok) {
+        console.log('Upload response status:', uploadResponse.status, uploadResponse.statusText);
+        
+        // Check for success (200 or 201 are both OK)
+        if (uploadResponse.status === 200 || uploadResponse.status === 201) {
+          const result = await uploadResponse.json();
+          console.log('Upload successful:', result);
           alert(`✓ ${isUpdate ? 'Updated' : 'Saved'} "${fileName}" to Google Drive!`);
         } else {
-          throw new Error('Upload failed');
+          const errorText = await uploadResponse.text();
+          console.error('Upload failed:', uploadResponse.status, errorText);
+          throw new Error(`Upload returned status ${uploadResponse.status}`);
         }
       } catch (error) {
         console.error('Error saving to Drive:', error);
