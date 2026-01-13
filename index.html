@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
   <style>
     * {
       margin: 0;
@@ -667,6 +669,9 @@
       <div class="header-top">
         <h1>Recursive Story Plotter</h1>
         <div class="header-buttons">
+          <button id="driveSignInBtn" class="hidden">📂 Sign in to Drive</button>
+          <button id="driveLoadBtn" class="hidden">📂 Load from Drive</button>
+          <button id="driveSaveBtn" class="hidden">💾 Save to Drive</button>
           <button id="importBtn">📁 Import</button>
           <button id="exportBtn">📄 Export</button>
           <button id="newStoryBtn">New Story</button>
@@ -694,6 +699,18 @@
   <div id="modalContainer"></div>
 
   <script>
+    // Google Drive Configuration
+    // YOU NEED TO REPLACE THESE WITH YOUR OWN VALUES
+    const GOOGLE_CLIENT_ID = '363376028258-s3f3afcoo96eituftqoeg45ftgf9sbb1.apps.googleusercontent.com';
+    const GOOGLE_API_KEY = 'AIzaSyAdSpxTYwhYLy8CLDNoVCMwPAkr95TFKtw';
+    const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+    
+    let gapiInited = false;
+    let gisInited = false;
+    let tokenClient;
+    let accessToken = null;
+    
     // Story structures
     const STRUCTURES = {
       freeform: {
@@ -845,6 +862,9 @@
     const importBtn = document.getElementById('importBtn');
     const fileInput = document.getElementById('fileInput');
     const structureControls = document.getElementById('structureControls');
+    const driveSignInBtn = document.getElementById('driveSignInBtn');
+    const driveLoadBtn = document.getElementById('driveLoadBtn');
+    const driveSaveBtn = document.getElementById('driveSaveBtn');
 
     // Initialize
     function init() {
@@ -2339,6 +2359,267 @@
 
     // Initialize app
     init();
+    
+    // Google Drive Integration
+    
+    // Initialize Google API
+    function gapiLoaded() {
+      gapi.load('client', initializeGapiClient);
+    }
+    
+    async function initializeGapiClient() {
+      // Only initialize if credentials are set
+      if (GOOGLE_CLIENT_ID.includes('YOUR_CLIENT_ID')) {
+        console.log('Google Drive: Client ID not configured');
+        return;
+      }
+      
+      await gapi.client.init({
+        apiKey: GOOGLE_API_KEY,
+        discoveryDocs: [DISCOVERY_DOC],
+      });
+      gapiInited = true;
+      maybeEnableDriveButtons();
+    }
+    
+    function gisLoaded() {
+      // Only initialize if credentials are set
+      if (GOOGLE_CLIENT_ID.includes('YOUR_CLIENT_ID')) {
+        return;
+      }
+      
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: SCOPES,
+        callback: '', // defined later
+      });
+      gisInited = true;
+      maybeEnableDriveButtons();
+    }
+    
+    function maybeEnableDriveButtons() {
+      if (gapiInited && gisInited) {
+        driveSignInBtn.classList.remove('hidden');
+      }
+    }
+    
+    function handleAuthClick() {
+      tokenClient.callback = async (resp) => {
+        if (resp.error !== undefined) {
+          throw (resp);
+        }
+        accessToken = gapi.client.getToken().access_token;
+        driveSignInBtn.classList.add('hidden');
+        driveLoadBtn.classList.remove('hidden');
+        driveSaveBtn.classList.remove('hidden');
+      };
+
+      if (gapi.client.getToken() === null) {
+        tokenClient.requestAccessToken({prompt: 'consent'});
+      } else {
+        tokenClient.requestAccessToken({prompt: ''});
+      }
+    }
+    
+    async function saveToDrive() {
+      if (!accessToken) {
+        alert('Please sign in to Google Drive first');
+        return;
+      }
+      
+      const fileName = `${state.storyName || 'story'}-outline.txt`;
+      
+      // Generate export content
+      const lines = [];
+      lines.push('STORY_STRUCTURE_EXPORT');
+      lines.push(`StoryName: ${state.storyName || 'Untitled'}`);
+      lines.push(`Structure: ${state.currentStructure.name}`);
+      lines.push(`StructureID: ${state.currentStructure.id}`);
+      lines.push(`Generated: ${new Date().toLocaleString()}`);
+      lines.push('============================================================');
+
+      state.plotPoints.forEach(point => {
+        if (point.type === 'beat') {
+          lines.push(`[BEAT:${point.beatId}:${point.beatName.toUpperCase()}]`);
+          lines.push(point.content || 'Not yet written');
+          
+          if (point.chapters && point.chapters.length > 0) {
+            lines.push('CHAPTERS:');
+            point.chapters.forEach(chapter => {
+              const label = chapter.type === 'chapter' ? 
+                `Chapter ${getChapterNumber(chapter)}` : 
+                chapter.type.charAt(0).toUpperCase() + chapter.type.slice(1);
+              lines.push(`  [${chapter.internalOrder}] ${label}: ${chapter.title}`);
+              
+              if (chapter.notes) {
+                lines.push(`    📝 Notes: ${chapter.notes}`);
+              }
+              
+              if (chapter.todos && chapter.todos.length > 0) {
+                lines.push('    ✓ Todos:');
+                chapter.todos.forEach(todo => {
+                  const mark = todo.completed ? '✓' : ' ';
+                  lines.push(`      [${mark}] ${todo.text}`);
+                });
+              }
+            });
+          }
+        } else if (point.type === 'freeform') {
+          lines.push('[FREEFORM]');
+          lines.push(point.content);
+        } else if (point.type === 'freeform-anchor') {
+          lines.push(`[ANCHOR:${point.anchorType}]`);
+          lines.push(point.content);
+        }
+        lines.push('');
+      });
+      
+      const content = lines.join('\n');
+      
+      // Check if file already exists
+      try {
+        const response = await gapi.client.drive.files.list({
+          q: `name='${fileName}' and trashed=false`,
+          fields: 'files(id, name)',
+          spaces: 'drive'
+        });
+        
+        const files = response.result.files;
+        let fileId = null;
+        
+        if (files && files.length > 0) {
+          fileId = files[0].id;
+        }
+        
+        const metadata = {
+          name: fileName,
+          mimeType: 'text/plain'
+        };
+        
+        const file = new Blob([content], {type: 'text/plain'});
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+        form.append('file', file);
+        
+        let uploadResponse;
+        if (fileId) {
+          // Update existing file
+          uploadResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, {
+            method: 'PATCH',
+            headers: new Headers({'Authorization': 'Bearer ' + accessToken}),
+            body: form
+          });
+        } else {
+          // Create new file
+          uploadResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: new Headers({'Authorization': 'Bearer ' + accessToken}),
+            body: form
+          });
+        }
+        
+        if (uploadResponse.ok) {
+          alert('✓ Saved to Google Drive!');
+        } else {
+          throw new Error('Upload failed');
+        }
+      } catch (error) {
+        console.error('Error saving to Drive:', error);
+        alert('Failed to save to Google Drive. Please try again.');
+      }
+    }
+    
+    async function loadFromDrive() {
+      if (!accessToken) {
+        alert('Please sign in to Google Drive first');
+        return;
+      }
+      
+      try {
+        // List all story outline files
+        const response = await gapi.client.drive.files.list({
+          q: "name contains '-outline.txt' and trashed=false",
+          fields: 'files(id, name, modifiedTime)',
+          orderBy: 'modifiedTime desc',
+          pageSize: 20,
+          spaces: 'drive'
+        });
+        
+        const files = response.result.files;
+        
+        if (!files || files.length === 0) {
+          alert('No story files found in your Google Drive');
+          return;
+        }
+        
+        // Create selection modal
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+          <div class="modal">
+            <h2>Load from Google Drive</h2>
+            <select id="driveFileSelect" size="10" style="width: 100%; height: 300px; margin-bottom: 15px;">
+              ${files.map(file => {
+                const date = new Date(file.modifiedTime).toLocaleDateString();
+                return `<option value="${file.id}">${file.name} (${date})</option>`;
+              }).join('')}
+            </select>
+            <div class="button-group">
+              <button id="cancelDriveLoad">Cancel</button>
+              <button id="confirmDriveLoad" class="primary">Load Selected</button>
+            </div>
+          </div>
+        `;
+        
+        document.getElementById('modalContainer').appendChild(modal);
+        
+        document.getElementById('cancelDriveLoad').addEventListener('click', () => {
+          modal.remove();
+        });
+        
+        document.getElementById('confirmDriveLoad').addEventListener('click', async () => {
+          const fileId = document.getElementById('driveFileSelect').value;
+          if (!fileId) {
+            alert('Please select a file');
+            return;
+          }
+          
+          try {
+            const fileResponse = await gapi.client.drive.files.get({
+              fileId: fileId,
+              alt: 'media'
+            });
+            
+            parseImport(fileResponse.body);
+            modal.remove();
+            render();
+            alert('✓ Loaded from Google Drive!');
+          } catch (error) {
+            console.error('Error loading file:', error);
+            alert('Failed to load file. Please try again.');
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error listing files:', error);
+        alert('Failed to access Google Drive. Please try again.');
+      }
+    }
+    
+    // Set up Drive button listeners
+    driveSignInBtn.addEventListener('click', handleAuthClick);
+    driveSaveBtn.addEventListener('click', saveToDrive);
+    driveLoadBtn.addEventListener('click', loadFromDrive);
+    
+    // Load Google APIs
+    if (typeof gapi !== 'undefined') {
+      gapiLoaded();
+    }
+    if (typeof google !== 'undefined') {
+      gisLoaded();
+    }
+    window.gapiLoaded = gapiLoaded;
+    window.gisLoaded = gisLoaded;
   </script>
 </body>
 </html>
