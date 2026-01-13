@@ -2368,37 +2368,47 @@
     }
     
     async function initializeGapiClient() {
-      // Only initialize if credentials are set
+      // Check if credentials are configured
       if (GOOGLE_CLIENT_ID.includes('YOUR_CLIENT_ID')) {
-        console.log('Google Drive: Client ID not configured');
+        console.log('Google Drive: Credentials not configured. Set GOOGLE_CLIENT_ID and GOOGLE_API_KEY to enable Drive sync.');
         return;
       }
       
-      await gapi.client.init({
-        apiKey: GOOGLE_API_KEY,
-        discoveryDocs: [DISCOVERY_DOC],
-      });
-      gapiInited = true;
-      maybeEnableDriveButtons();
+      try {
+        await gapi.client.init({
+          apiKey: GOOGLE_API_KEY,
+          discoveryDocs: [DISCOVERY_DOC],
+        });
+        gapiInited = true;
+        maybeEnableDriveButtons();
+      } catch (error) {
+        console.error('Google API initialization error:', error);
+      }
     }
     
     function gisLoaded() {
-      // Only initialize if credentials are set
+      // Check if credentials are configured
       if (GOOGLE_CLIENT_ID.includes('YOUR_CLIENT_ID')) {
+        console.log('Google Drive: Credentials not configured.');
         return;
       }
       
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: SCOPES,
-        callback: '', // defined later
-      });
-      gisInited = true;
-      maybeEnableDriveButtons();
+      try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: SCOPES,
+          callback: '', // defined later
+        });
+        gisInited = true;
+        maybeEnableDriveButtons();
+      } catch (error) {
+        console.error('Google Identity Services error:', error);
+      }
     }
     
     function maybeEnableDriveButtons() {
       if (gapiInited && gisInited) {
+        console.log('Google Drive integration ready!');
         driveSignInBtn.classList.remove('hidden');
       }
     }
@@ -2427,7 +2437,16 @@
         return;
       }
       
-      const fileName = `${state.storyName || 'story'}-outline.txt`;
+      if (!state.storyName || state.storyName.trim() === '') {
+        alert('Please enter a story name before saving to Drive');
+        storyNameInput.focus();
+        return;
+      }
+      
+      const fileName = `${state.storyName.trim()}-outline.txt`;
+      
+      driveSaveBtn.textContent = '💾 Saving...';
+      driveSaveBtn.disabled = true;
       
       // Generate export content
       const lines = [];
@@ -2519,13 +2538,16 @@
         }
         
         if (uploadResponse.ok) {
-          alert('✓ Saved to Google Drive!');
+          alert(`✓ ${isUpdate ? 'Updated' : 'Saved'} "${fileName}" to Google Drive!`);
         } else {
           throw new Error('Upload failed');
         }
       } catch (error) {
         console.error('Error saving to Drive:', error);
         alert('Failed to save to Google Drive. Please try again.');
+      } finally {
+        driveSaveBtn.textContent = '💾 Save to Drive';
+        driveSaveBtn.disabled = false;
       }
     }
     
@@ -2611,15 +2633,19 @@
     driveSaveBtn.addEventListener('click', saveToDrive);
     driveLoadBtn.addEventListener('click', loadFromDrive);
     
-    // Load Google APIs
-    if (typeof gapi !== 'undefined') {
-      gapiLoaded();
-    }
-    if (typeof google !== 'undefined') {
-      gisLoaded();
-    }
+    // Load Google APIs - these will call gapiLoaded/gisLoaded when ready
     window.gapiLoaded = gapiLoaded;
     window.gisLoaded = gisLoaded;
+    
+    // Also try to initialize immediately in case scripts already loaded
+    setTimeout(() => {
+      if (typeof gapi !== 'undefined' && !gapiInited) {
+        gapiLoaded();
+      }
+      if (typeof google !== 'undefined' && typeof google.accounts !== 'undefined' && !gisInited) {
+        gisLoaded();
+      }
+    }, 1000);
   </script>
 </body>
 </html>
