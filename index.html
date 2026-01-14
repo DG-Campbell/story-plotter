@@ -720,8 +720,8 @@
   <script>
     // Google Drive Configuration
     // YOU NEED TO REPLACE THESE WITH YOUR OWN VALUES
-    const GOOGLE_CLIENT_ID = '363376028258-s3f3afcoo96eituftqoeg45ftgf9sbb1.apps.googleusercontent.com';
-    const GOOGLE_API_KEY = 'AIzaSyAdSpxTYwhYLy8CLDNoVCMwPAkr95TFKtw';
+    const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com';
+    const GOOGLE_API_KEY = 'YOUR_API_KEY_HERE';
     const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
     const SCOPES = 'https://www.googleapis.com/auth/drive.file';
     
@@ -920,6 +920,7 @@
         chaptersEnabled: state.chaptersEnabled,
         storyName: state.storyName
       };
+      console.log('autoSave: mode =', state.mode, 'structure =', state.currentStructure.id);
       localStorage.setItem('storyPlotterAutoSave', JSON.stringify(data));
     }
 
@@ -1120,11 +1121,27 @@
       // Detect and apply structure BEFORE parsing beats
       if (structureIdMatch) {
         const structId = structureIdMatch[1].trim();
-        const detectedStructure = STRUCTURES[structId] || STRUCTURES.freeform;
+        
+        console.log('Raw structId from file:', structId);
+        console.log('Available structures:', Object.keys(STRUCTURES));
+        
+        // Try to find structure - handle both kebab-case and camelCase
+        let detectedStructure = STRUCTURES[structId];
+        console.log('Direct lookup result:', detectedStructure);
+        
+        if (!detectedStructure) {
+          // Convert kebab-case to camelCase and try again
+          const camelCaseId = structId.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+          console.log('Converted to camelCase:', camelCaseId);
+          detectedStructure = STRUCTURES[camelCaseId] || STRUCTURES.freeform;
+          console.log('CamelCase lookup result:', detectedStructure);
+        }
         
         // Apply the detected structure
         state.currentStructure = detectedStructure;
-        state.mode = structId === 'freeform' ? 'freeform' : 'beat';
+        state.mode = detectedStructure.id === 'freeform' ? 'freeform' : 'beat';
+        
+        console.log('Import detected structure:', structId, '-> mode:', state.mode);
         
         // Hide structure selector if it's a beat structure
         if (state.mode === 'beat') {
@@ -1230,6 +1247,10 @@
       const hasExistingChapters = state.plotPoints.some(p => p.chapters && p.chapters.length > 0);
       state.chaptersEnabled = allBeatsComplete || hasExistingChapters;
       
+      console.log('Import: allBeatsComplete =', allBeatsComplete);
+      console.log('Import: hasExistingChapters =', hasExistingChapters);
+      console.log('Import: chaptersEnabled =', state.chaptersEnabled);
+      
       // Set current phase based on completion
       if (state.mode === 'freeform') {
         const hasStart = state.plotPoints.some(p => p.type === 'freeform-anchor' && p.anchorType === 'start');
@@ -1297,6 +1318,12 @@
 
     // Render input section
     function renderInputSection() {
+      // If chapters are already enabled, hide input section
+      if (state.chaptersEnabled) {
+        inputSection.classList.add('hidden');
+        return;
+      }
+      
       // Freeform mode
       if (state.mode === 'freeform') {
         if (state.currentPhase === 'start') {
@@ -1930,13 +1957,21 @@
 
     // Render projections
     function renderProjections() {
+      console.log('renderProjections called');
+      console.log('chaptersEnabled:', state.chaptersEnabled);
+      console.log('mode:', state.mode);
+      
       if (!state.chaptersEnabled || state.mode === 'freeform') {
+        console.log('Hiding projections: chaptersEnabled =', state.chaptersEnabled, 'mode =', state.mode);
         projections.classList.add('hidden');
         return;
       }
 
       const firstBeatWithChapters = state.plotPoints.find(p => p.chapters && p.chapters.length > 0 && p.beatPercentage > 0);
+      console.log('firstBeatWithChapters:', firstBeatWithChapters);
+      
       if (!firstBeatWithChapters) {
+        console.log('No beat with chapters found, hiding projections');
         projections.classList.add('hidden');
         return;
       }
